@@ -10,12 +10,12 @@
 
 Existing NocoDB MCP servers focus on records (CRUD on rows). This one covers the **whole NocoDB v3 API surface** so an AI agent can manage your databases end-to-end without dropping into the UI:
 
-- 🆕 **Schema operations**: create / update / delete fields, tables, views, filters, sorts
-- 🪝 **Webhooks**: full lifecycle management
-- 📥 **CSV import** & schema export/import for portable templates
-- 🔗 **Links and attachments** as first-class operations
-- 🛡️ **Dry-run mode** on destructive operations
-- 📊 Records, dashboards, comments, scripts, NocoDocs
+-  **Schema operations**: create / update / delete fields, tables, views, filters, sorts
+-  **Webhooks**: full lifecycle management
+-  **CSV import** & schema export/import for portable templates
+-  **Links and attachments** as first-class operations
+-  **Dry-run mode** on destructive operations
+-  Records, dashboards, comments, scripts, NocoDocs
 
 ## Status
 
