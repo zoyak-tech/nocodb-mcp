@@ -108,6 +108,45 @@ Deployable via [Smithery](https://smithery.ai) — see `smithery.yaml` in this r
 
 ---
 
+## ⚠️ NocoDB Community vs Enterprise
+
+NocoDB gates large parts of the v3 Meta API behind an **Enterprise license** — even though the same features are available **for free in the NocoDB UI**. This is a NocoDB licensing decision, not an MCP limitation.
+
+### Works on **Community Self-hosted** (free)
+
+✅ Connectivity, workspaces, bases (read), tables, fields (CRUD), records (CRUD + bulk + count + global search), filters (list), sorts (list), CSV / JSON import + export, link records, attachments
+
+> Roughly **40–50 of the 92 tools work on free self-hosted**. The exact count depends on which write endpoints NocoDB exposes — some only error on actual write attempts.
+
+### Requires **NocoDB Enterprise** (paid) or **Cloud Business+**
+
+❌ Views (`feature_api_view_v3`)
+❌ Webhooks (`feature_api_webhook_v3`)
+❌ Dashboards & widgets (`feature_api_dashboard_v3`)
+❌ Workflows (`feature_api_workflow_management`)
+❌ Scripts (`feature_api_script_management`)
+❌ NocoDocs (`feature_docs_apis`) — feature works in UI, API gated
+❌ Record comments (`feature_api_comment_v3`)
+
+When you call a gated tool on a Community instance, you'll get a structured error:
+
+```json
+{
+  "ok": false,
+  "status": 402,
+  "error": "ERR_LICENSE_REQUIRED",
+  "details": { "message": "The \"feature_X\" feature requires an Enterprise license." }
+}
+```
+
+The MCP server itself runs fine and continues to work for everything else.
+
+### Cloud (`app.nocodb.com`)
+
+Most of these features are tied to NocoDB Cloud's pricing tiers — Free, Team, Business, Enterprise. See [nocodb.com/pricing](https://nocodb.com/pricing).
+
+---
+
 ## Configuration
 
 | Variable | Required | Default | Description |
@@ -151,7 +190,7 @@ See [`.env.example`](.env.example).
 ### Records (8)
 `list_records` (with v3 quoted `where` syntax), `get_record`, `create_records`, `update_records`, `delete_records` (dry_run), `upsert_records`, `count_records`, `global_search` (cross-table substring)
 
-### Views (5)
+### Views (5) — 🔒 Enterprise
 `list_views`, `get_view`, `create_view`, `update_view`, `delete_view` (dry_run)
 
 > All 6 types: grid, gallery, kanban, form, calendar, map.
@@ -164,7 +203,7 @@ See [`.env.example`](.env.example).
 ### Sorts (4)
 `list_sorts`, `create_sort`, `update_sort`, `delete_sort` (dry_run)
 
-### Webhooks (5)
+### Webhooks (5) — 🔒 Enterprise
 `list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `delete_webhook` (dry_run)
 
 > 6 events × 7 channels (URL, Email, Slack, Discord, Teams, Whatsapp, Twilio).
@@ -176,25 +215,27 @@ See [`.env.example`](.env.example).
 `upload_attachment_to_record` (multipart from local file), `attach_url_to_record` (NocoDB downloads URL)
 
 ### Import / Export (5)
-`import_csv_to_new_table` (with auto field-type inference), `import_csv_append`, `import_json_records`, `export_table_json`, `export_base_schema` (full structural dump)
+`import_csv_to_new_table` (with auto field-type inference), `import_csv_append`, `import_json_records`, `export_table_json`, `export_base_schema` (uses views — partial on Community)
 
 ### Schema operations ⭐ (3)
 `bulk_create_fields`, `clone_base`, `import_base_schema`
 
-### Comments (5)
+### Comments (5) — 🔒 Enterprise
 `list_record_comments`, `create_record_comment`, `update_comment`, `delete_comment` (dry_run), `resolve_comment`
 
-### Scripts (5)
+### Scripts (5) — 🔒 Enterprise
 `list_scripts`, `get_script`, `create_script`, `update_script`, `delete_script` (dry_run)
 
-### Dashboards (10)
+### Dashboards (10) — 🔒 Enterprise
 `list_dashboards`, `get_dashboard`, `get_dashboard_data`, `create_dashboard`, `update_dashboard`, `delete_dashboard` (dry_run), `list_widgets`, `create_widget`, `update_widget`, `delete_widget` (dry_run)
 
-### Workflows (5)
+### Workflows (5) — 🔒 Enterprise
 `list_workflows`, `get_workflow`, `execute_workflow`, `list_workflow_executions`, `get_workflow_execution`
 
-### NocoDocs (6)
+### NocoDocs (6) — 🔒 Enterprise
 `list_docs`, `get_doc`, `create_doc`, `update_doc`, `delete_doc` (dry_run), `reorder_doc`
+
+> NocoDocs is free in the NocoDB UI but its v3 API is gated behind Enterprise license (`feature_docs_apis`). Same pattern applies to other 🔒 groups above.
 
 ### Safety: dry_run
 
