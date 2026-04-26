@@ -1,6 +1,6 @@
 {
   "name": "nocodb-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Full-coverage MCP server for NocoDB v3 API — fields, tables, views, webhooks, links, attachments, schema ops, CSV import, and more.",
   "type": "module",
   "main": "dist/index-stdio.js",
