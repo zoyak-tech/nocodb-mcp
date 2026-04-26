@@ -1,0 +1,48 @@
+/**
+ * NocoDB v3 field types (UIDT). Reference:
+ * https://nocodb.com/docs/product-docs/fields/field-types
+ */
+export const FIELD_TYPES = [
+  'SingleLineText',
+  'LongText',
+  'RichText',
+  'Number',
+  'Decimal',
+  'Currency',
+  'Percent',
+  'Duration',
+  'Rating',
+  'Checkbox',
+  'SingleSelect',
+  'MultiSelect',
+  'Date',
+  'DateTime',
+  'Time',
+  'Year',
+  'PhoneNumber',
+  'Email',
+  'URL',
+  'Attachment',
+  'User',
+  'Formula',
+  'Rollup',
+  'Lookup',
+  'LinkToAnotherRecord',
+  'Links',
+  'Barcode',
+  'QrCode',
+  'JSON',
+  'Geometry',
+  'GeoData',
+  'SpecificDBType',
+  'CreatedTime',
+  'LastModifiedTime',
+  'CreatedBy',
+  'LastModifiedBy',
+  'AutoNumber',
+  'ID',
+  'ForeignKey',
+  'Button',
+] as const;
+
+export type FieldType = (typeof FIELD_TYPES)[number];
