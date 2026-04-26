@@ -3,67 +3,41 @@
 [![npm](https://img.shields.io/npm/v/nocodb-mcp)](https://www.npmjs.com/package/nocodb-mcp)
 [![CI](https://github.com/zoyak-tech/nocodb-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zoyak-tech/nocodb-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![NocoDB v3](https://img.shields.io/badge/NocoDB-v3%20%E2%80%A2%202026.04+-1ABC9C)](https://nocodb.com)
 
-> Full-coverage Model Context Protocol (MCP) server for NocoDB v3 — including everything other MCPs miss: **field creation**, **view management**, **webhooks**, **schema export/import**, **CSV import**, and more.
+> Full-coverage Model Context Protocol (MCP) server for NocoDB v3 — including everything other MCPs miss: **field creation**, **view management**, **webhooks**, **schema export/import**, **CSV import**, **relational links**, **dashboards**, **NocoDocs**, and more.
+
+**92 tools across 19 groups.** Two transports (stdio + HTTP). Works with Claude Code, Claude Desktop, Cursor, and any MCP-compatible client.
+
+---
 
 ## Why another NocoDB MCP?
 
-Existing NocoDB MCP servers focus on records (CRUD on rows). This one covers the **whole NocoDB v3 API surface** so an AI agent can manage your databases end-to-end without dropping into the UI:
+Existing NocoDB MCPs cover only records (CRUD on rows). This one covers the **whole NocoDB v3 API surface** so an AI agent can manage your databases end-to-end without dropping into the UI:
 
--  **Schema operations**: create / update / delete fields, tables, views, filters, sorts
--  **Webhooks**: full lifecycle management
--  **CSV import** & schema export/import for portable templates
--  **Links and attachments** as first-class operations
--  **Dry-run mode** on destructive operations
--  Records, dashboards, comments, scripts, NocoDocs
+- **Schema operations** — create / update / delete fields, tables, views, filters, sorts. Bulk create fields. Clone bases. Import/export schema as JSON.
+- **All 40 v3 field types** — SingleSelect, MultiSelect, Formula, LinkToAnotherRecord, Attachment, Rollup, Lookup, etc.
+- **Views** — all 6 types (grid, gallery, kanban, form, calendar, map).
+- **Webhooks** — full lifecycle, all 6 events × 7 channels.
+- **Relational links** — create relations, link/unlink records.
+- **CSV import** with auto type inference. JSON import. Schema export.
+- **Dashboards & widgets**, **NocoDocs**, **Scripts**, **Workflows**, **Comments**.
+- **Dry-run mode** on every destructive operation — AI agents preview before executing.
 
-## Status
-
-✅ **Phase 1 — v0.1.0**. 28 tools across 6 groups: connectivity, workspaces, bases, tables, fields, records.
-See [ROADMAP](#roadmap) for what's coming.
-
-## Requirements
-
-- Node.js 20 or newer
-- A NocoDB instance running version `0.265+` (recommended: `2026.04.x`)
-- A NocoDB API token: NocoDB → Account Settings → Tokens → Create
+---
 
 ## Install
 
-```bash
-npm install -g nocodb-mcp
-```
-
-Or run directly via `npx`:
+### With Claude Code
 
 ```bash
-npx -y nocodb-mcp
+claude mcp add nocodb -s user \
+  -e NOCODB_BASE_URL=https://your-nocodb.com \
+  -e NOCODB_API_TOKEN=nc_pat_... \
+  -- npx -y nocodb-mcp
 ```
 
-## Configure
-
-Set environment variables:
-
-```bash
-export NOCODB_BASE_URL=https://data.example.com
-export NOCODB_API_TOKEN=nc_pat_...
-```
-
-See [`.env.example`](.env.example) for all options.
-
-## Use with Claude Code
-
-```bash
-claude mcp add nocodb -- npx -y nocodb-mcp \
-  -e NOCODB_BASE_URL=https://data.example.com \
-  -e NOCODB_API_TOKEN=nc_pat_...
-```
-
-Then in Claude Code:
-
-> Use the `ping_nocodb` tool to check the connection.
-
-## Use with Claude Desktop
+### With Claude Desktop
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
@@ -74,7 +48,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
       "command": "npx",
       "args": ["-y", "nocodb-mcp"],
       "env": {
-        "NOCODB_BASE_URL": "https://data.example.com",
+        "NOCODB_BASE_URL": "https://your-nocodb.com",
         "NOCODB_API_TOKEN": "nc_pat_..."
       }
     }
@@ -82,72 +56,180 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 }
 ```
 
-## Tools (v0.1.0 — 28 tools)
+### With Cursor / Windsurf / any MCP client
 
-### Connectivity
+Same idea — point the client at `npx -y nocodb-mcp` with the env variables above.
+
+### Self-hosted HTTP
+
+```bash
+NOCODB_BASE_URL=... NOCODB_API_TOKEN=... PORT=3000 npx -y nocodb-mcp-http
+```
+
+Then connect any MCP HTTP client to `http://your-host:3000/mcp`. Health check at `/health`.
+
+### Docker
+
+```bash
+docker build -t nocodb-mcp .
+docker run -p 3000:3000 \
+  -e NOCODB_BASE_URL=... -e NOCODB_API_TOKEN=... \
+  nocodb-mcp node dist/index-http.js
+```
+
+### Smithery
+
+Deployable via [Smithery](https://smithery.ai) — see `smithery.yaml` in this repo. Smithery handles env vars, container orchestration, and exposes a hosted endpoint.
+
+---
+
+## Configuration
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `NOCODB_BASE_URL` | ✅ | — | NocoDB instance URL (no trailing slash) |
+| `NOCODB_API_TOKEN` | ✅ | — | API token from NocoDB → Account → Tokens |
+| `NOCODB_DEFAULT_BASE_ID` | — | — | Optional default base ID |
+| `NOCODB_TIMEOUT_MS` | — | `30000` | HTTP timeout for NocoDB calls |
+| `NOCODB_LOG_LEVEL` | — | `info` | `debug` / `info` / `warn` / `error` |
+| `PORT` (HTTP only) | — | `3000` | HTTP server port |
+| `HOST` (HTTP only) | — | `127.0.0.1` | Bind address |
+| `MCP_STATELESS` (HTTP only) | — | `false` | Set to `true` to disable session IDs |
+
+See [`.env.example`](.env.example).
+
+---
+
+## Tool surface — 92 tools across 19 groups
+
+### Connectivity (1)
 | Tool | Description |
 |---|---|
-| `ping_nocodb` | Check connectivity, return NocoDB version + accessible workspace count |
+| `ping_nocodb` | Verify connection, return NocoDB version + accessible workspace count |
 
-### Workspaces
+### Workspaces (1)
 | Tool | Description |
 |---|---|
 | `list_workspaces` | List all workspaces accessible by the API token |
 
-### Bases
-| Tool | Description |
-|---|---|
-| `list_bases` | List all bases in a workspace |
-| `get_base` | Get a base by ID |
-| `create_base` | Create a new base in a workspace |
-| `update_base` | Rename, change description or color |
-| `delete_base` | Delete a base (supports `dry_run`) |
+### Bases (5)
+`list_bases`, `get_base`, `create_base`, `update_base`, `delete_base` (dry_run)
 
-### Tables
-| Tool | Description |
-|---|---|
-| `list_tables` | List all tables in a base |
-| `get_table` | Get table details (with fields) |
-| `create_table` | Create a table, optionally with initial fields |
-| `update_table` | Rename or update description |
-| `delete_table` | Delete a table (supports `dry_run`) |
-| `clone_table` | Duplicate table structure (no records) |
+### Tables (6)
+`list_tables`, `get_table`, `create_table`, `update_table`, `delete_table` (dry_run), `clone_table`
 
-### Fields ⭐ (the main gap in other MCPs)
-| Tool | Description |
-|---|---|
-| `list_fields` | List all fields of a table |
-| `get_field` | Get field details with options |
-| `create_field` | Create a new field of any v3 type (incl. SingleSelect, Formula, LinkToAnotherRecord) |
-| `update_field` | Rename, change description, modify options |
-| `delete_field` | Delete a field (supports `dry_run`) |
-| `reorder_field` | Change field position |
-| `bulk_rename_fields` | Rename many fields atomically |
+### Fields ⭐ (7)
+`list_fields`, `get_field`, `create_field`, `update_field`, `delete_field` (dry_run), `reorder_field`, `bulk_rename_fields`
 
-### Records
-| Tool | Description |
-|---|---|
-| `list_records` | List with v3 `where` syntax, sort, pagination, view filter |
-| `get_record` | Get single record by ID |
-| `create_records` | Bulk insert |
-| `update_records` | Bulk update (each record needs primary key) |
-| `delete_records` | Bulk delete (supports `dry_run`) |
-| `upsert_records` | Insert or update (idempotent imports) |
-| `count_records` | Count matching records |
-| `global_search` | Substring search across all string fields of all tables in a base |
+> Supports all 40 v3 UIDT types: SingleLineText, LongText, Number, Decimal, Currency, Percent, Duration, Rating, Checkbox, SingleSelect, MultiSelect, Date, DateTime, Time, Year, PhoneNumber, Email, URL, Attachment, User, Formula, Rollup, Lookup, LinkToAnotherRecord, Links, Barcode, QrCode, JSON, Geometry, GeoData, SpecificDBType, CreatedTime, LastModifiedTime, CreatedBy, LastModifiedBy, AutoNumber, ID, ForeignKey, Button.
 
-### Safety
+### Records (8)
+`list_records` (with v3 quoted `where` syntax), `get_record`, `create_records`, `update_records`, `delete_records` (dry_run), `upsert_records`, `count_records`, `global_search` (cross-table substring)
 
-All destructive operations (`delete_*`) accept a `dry_run: true` parameter that returns a preview of what would have been affected without making any changes. Use this from AI agents to safely confirm before committing.
+### Views (5)
+`list_views`, `get_view`, `create_view`, `update_view`, `delete_view` (dry_run)
 
-### Roadmap
+> All 6 types: grid, gallery, kanban, form, calendar, map.
 
-| Phase | Tools | Status |
-|---|---|---|
-| **1** | bases, tables, fields, records | ✅ shipped (v0.1.0) |
-| **2** | views (grid/gallery/kanban/form/calendar/map), filters, sorts, webhooks, links, attachments, CSV/JSON import-export | planned |
-| **3** | schema export/import, comments, scripts, dashboards, workflows, NocoDocs | planned |
-| **4** | HTTP/SSE transport, Smithery listing | planned |
+### Filters (5)
+`list_filters`, `create_filter`, `set_filters` (atomic replace), `update_filter`, `delete_filter` (dry_run)
+
+> 21 operators: eq, neq, like, nlike, gt, lt, ge, le, in, notin, null, notnull, empty, notempty, between, notbetween, allof, anyof, nallof, nanyof, isWithin.
+
+### Sorts (4)
+`list_sorts`, `create_sort`, `update_sort`, `delete_sort` (dry_run)
+
+### Webhooks (5)
+`list_webhooks`, `get_webhook`, `create_webhook`, `update_webhook`, `delete_webhook` (dry_run)
+
+> 6 events × 7 channels (URL, Email, Slack, Discord, Teams, Whatsapp, Twilio).
+
+### Links (4)
+`create_link_field`, `list_linked_records`, `link_records`, `unlink_records`
+
+### Attachments (2)
+`upload_attachment_to_record` (multipart from local file), `attach_url_to_record` (NocoDB downloads URL)
+
+### Import / Export (5)
+`import_csv_to_new_table` (with auto field-type inference), `import_csv_append`, `import_json_records`, `export_table_json`, `export_base_schema` (full structural dump)
+
+### Schema operations ⭐ (3)
+`bulk_create_fields`, `clone_base`, `import_base_schema`
+
+### Comments (5)
+`list_record_comments`, `create_record_comment`, `update_comment`, `delete_comment` (dry_run), `resolve_comment`
+
+### Scripts (5)
+`list_scripts`, `get_script`, `create_script`, `update_script`, `delete_script` (dry_run)
+
+### Dashboards (10)
+`list_dashboards`, `get_dashboard`, `get_dashboard_data`, `create_dashboard`, `update_dashboard`, `delete_dashboard` (dry_run), `list_widgets`, `create_widget`, `update_widget`, `delete_widget` (dry_run)
+
+### Workflows (5)
+`list_workflows`, `get_workflow`, `execute_workflow`, `list_workflow_executions`, `get_workflow_execution`
+
+### NocoDocs (6)
+`list_docs`, `get_doc`, `create_doc`, `update_doc`, `delete_doc` (dry_run), `reorder_doc`
+
+### Safety: dry_run
+
+All `delete_*` tools accept a `dry_run: true` parameter that returns a JSON preview of the action without performing it. Use this from AI agents to confirm before committing destructive operations:
+
+```json
+{
+  "dryRun": true,
+  "action": "delete_table",
+  "wouldAffect": { "base_id": "p123", "table_id": "m456" },
+  "note": "No changes were made. Re-run without dry_run: true to execute."
+}
+```
+
+---
+
+## Requirements
+
+- **Node.js 20** or newer
+- **NocoDB 0.265+** (v3 API). Recommended: latest `2026.04.x`.
+- A NocoDB API token (NocoDB → Account Settings → Tokens → Create)
+
+Verify your NocoDB version:
+
+```bash
+curl https://your-nocodb.com/api/v1/version
+```
+
+---
+
+## Examples
+
+> Talk to your AI agent in plain language; it picks the right tools.
+
+**Schema design:**
+> "Create a 'Customers' table in base p_xyz with fields: Name (text, required), Email (email, unique), Status (single select: Lead/Active/Churned), Revenue (decimal currency)."
+
+→ `create_table` + `bulk_create_fields`
+
+**CSV import:**
+> "Import `/Users/me/leads.csv` into base p_xyz as a new table called 'Q1 Leads'."
+
+→ `import_csv_to_new_table` (auto-infers field types)
+
+**Cross-table search:**
+> "Find any record mentioning 'acme' anywhere in base p_xyz."
+
+→ `global_search` (queries every string field across every table)
+
+**Templating:**
+> "Clone base p_xyz into a new base called 'Q2 Pipeline' (same workspace)."
+
+→ `clone_base`
+
+**Webhook setup:**
+> "When a new record is added to the Deals table, POST to https://example.com/hooks/deal-created."
+
+→ `create_webhook` with `event=after.insert, operation=URL`
+
+---
 
 ## Develop
 
@@ -155,29 +237,57 @@ All destructive operations (`delete_*`) accept a `dry_run: true` parameter that 
 git clone https://github.com/zoyak-tech/nocodb-mcp.git
 cd nocodb-mcp
 npm install
-cp .env.example .env  # fill in your values
+cp .env.example .env  # fill in your NocoDB credentials
+
 npm run typecheck
 npm run lint
 npm test
 npm run build
+
+# Try it locally
+NOCODB_BASE_URL=... NOCODB_API_TOKEN=... node dist/index-stdio.js
+# Or HTTP:
+NOCODB_BASE_URL=... NOCODB_API_TOKEN=... PORT=3000 node dist/index-http.js
 ```
 
-To test locally with Claude Code, build first then point it at the local entry:
+To register the local build with Claude Code:
 
 ```bash
-npm run build
-claude mcp add nocodb-dev -- node $(pwd)/dist/index-stdio.js \
-  -e NOCODB_BASE_URL=... -e NOCODB_API_TOKEN=...
+claude mcp add nocodb-dev -s user \
+  -e NOCODB_BASE_URL=... -e NOCODB_API_TOKEN=... \
+  -- node $(pwd)/dist/index-stdio.js
 ```
+
+---
+
+## Roadmap
+
+| | Status |
+|---|---|
+| Phase 1 — bases, tables, fields, records | ✅ v0.1.0 |
+| Phase 2 — views, filters, sorts, webhooks, links, attachments, CSV/JSON | ✅ v0.2.0 |
+| Phase 3 — schema-ops, comments, scripts, dashboards, workflows, NocoDocs | ✅ v0.3.0 |
+| Phase 4 — HTTP transport, Smithery, Docker | ✅ v1.0.0 |
+| Future | OAuth, granular permissions, NocoDB self-hosted Enterprise APIs |
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+---
 
 ## Contributing
 
-PRs welcome. Please:
+Pull requests welcome. Before submitting:
 
 1. Open an issue first for larger changes.
-2. Run `npm run lint && npm test && npm run typecheck` before submitting.
-3. Follow the existing tool registration pattern in `src/server.ts`.
+2. Run `npm run lint && npm test && npm run typecheck`.
+3. Follow the existing pattern — one file per tool group in `src/tools/`, register in `src/server.ts`.
+
+---
 
 ## License
 
-MIT © zoyak-tech
+[MIT](LICENSE) © zoyak-tech
+
+---
+
+> Built for the [Model Context Protocol](https://modelcontextprotocol.io/). Compatible with Claude Code, Claude Desktop, Cursor, and any MCP-aware client.

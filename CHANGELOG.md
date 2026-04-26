@@ -7,6 +7,60 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-04-26
+
+### Added — Phase 4: HTTP transport, Smithery, Docker
+
+- **`src/index-http.ts`** — Streamable HTTP transport entrypoint (the
+  modern replacement for SSE in the MCP spec). Single endpoint
+  `POST/GET/DELETE /mcp` plus `/health`. Stateful by default
+  (session ID per client) or stateless via `MCP_STATELESS=true`.
+- **Second binary**: `nocodb-mcp-http` for `npx` HTTP deploys.
+- **`smithery.yaml`** — Smithery deployment config with full
+  `configSchema` for one-click cloud deploys.
+- **`Dockerfile`** — multi-stage build (Node 20-slim), production
+  image with only `dist/` and runtime deps.
+- **`.dockerignore`** — keeps the image lean.
+
+### Changed
+
+- `src/server.ts` — exports `SERVER_VERSION` constant for HTTP health
+  check, bumped to 1.0.0.
+- `package.json` — added second binary, refreshed description.
+- README rewritten end-to-end:
+  - install snippets for Claude Code, Claude Desktop, Cursor, HTTP,
+    Docker, Smithery
+  - configuration table
+  - 92 tools listed by group with notes on field types, view types,
+    filter operators, webhook events
+  - example AI prompts mapped to tool calls
+
+### Stability
+
+- Stateful HTTP transport persists session IDs across reconnects
+- Graceful shutdown on SIGINT/SIGTERM
+- 13 tests still passing
+
+## [0.3.0] — 2026-04-26
+
+### Added — Phase 3: schema-ops, comments, scripts, dashboards, workflows, docs (+34 tools)
+
+- **schema-ops.ts** ⭐ (3): `bulk_create_fields` (create many fields atomically
+  with per-field success reporting), `clone_base` (full structural clone
+  into same workspace), `import_base_schema` (recreate base from JSON
+  document — accepts inline object or file path).
+- **comments.ts** (5): record comment lifecycle + `resolve_comment`.
+- **scripts.ts** (5): full CRUD for NocoDB Scripts feature.
+- **dashboards.ts** (10): dashboards CRUD + `get_dashboard_data` + widgets CRUD.
+- **workflows.ts** (5): list, get, execute, list executions, get execution.
+- **docs.ts** (6): NocoDocs CRUD (shipped in NocoDB 2026.04.2) + reorder.
+
+### Changed
+
+- 19 tool groups registered in `server.ts`
+- 92 unique tools (was 58 in v0.2.0)
+- Lines of code: ~3.5k (+0.9k)
+
 ## [0.2.0] — 2026-04-26
 
 ### Added — Phase 2: full feature parity + the gaps
@@ -84,7 +138,9 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Vitest + Biome + GitHub Actions CI on Node 20 and 22
 - MIT license
 
-[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.0
+[0.3.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v0.3.0
 [0.2.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v0.2.0
 [0.1.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v0.1.0
 [0.0.1]: https://github.com/zoyak-tech/nocodb-mcp/commit/1789e9d
