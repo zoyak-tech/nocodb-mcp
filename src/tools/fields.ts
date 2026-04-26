@@ -47,12 +47,13 @@ export function registerFieldTools(server: McpServer, client: NocoDBClient): voi
       title: 'Create field',
       description:
         'Create a new field (column) in a table. Supports all 34 NocoDB v3 field types. ' +
-        'Common options patterns: ' +
-        'SingleSelect/MultiSelect → `options.choices: [{ title, color? }, ...]`; ' +
-        'Number/Decimal/Currency → `options.precision`; ' +
-        'Formula → `options.formula: "{Field1} + {Field2}"`; ' +
-        'LinkToAnotherRecord → `options.relatedTableId, options.type: "mm" | "hm" | "bt" | "oo"`; ' +
-        'Rich text in LongText → `options.meta: { richMode: true }` ' +
+        'Pass type-specific config as `options` (kept verbatim, not flattened). ' +
+        'Pass field metadata flags as `meta`. Common patterns: ' +
+        'SingleSelect/MultiSelect → `options: { choices: [{ title, color? }, ...] }`; ' +
+        'Number/Decimal/Currency → `options: { precision: 2 }`; ' +
+        'Formula → `options: { formula: "{Field1} + {Field2}" }`; ' +
+        'LinkToAnotherRecord → `options: { relatedTableId: "m...", type: "mm" | "hm" | "bt" | "oo" }`; ' +
+        'Rich text in LongText → `meta: { richMode: true }` ' +
         '(NocoDB v3 has no separate "RichText" type — it is LongText with this flag).',
       inputSchema: {
         base_id: baseIdSchema,
@@ -68,10 +69,16 @@ export function registerFieldTools(server: McpServer, client: NocoDBClient): voi
           .record(z.string(), z.unknown())
           .optional()
           .describe(
-            'Field-type-specific options. Examples: ' +
-              '{ "choices": [{"title":"Active"},{"title":"Done"}] } for SingleSelect; ' +
-              '{ "formula": "{Field1} + {Field2}" } for Formula; ' +
-              '{ "relatedTableId": "m...", "type": "mm" } for LinkToAnotherRecord.',
+            'Field-type-specific options object — passed VERBATIM as `options` in the API body. ' +
+              'For SingleSelect: { "choices": [{"title":"Active"},{"title":"Done"}] }. ' +
+              'For Formula: { "formula": "{F1} + {F2}" }. ' +
+              'For LinkToAnotherRecord: { "relatedTableId": "m...", "type": "mm" }.',
+          ),
+        meta: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            'Field metadata flags. For LongText with rich-text editor: { "richMode": true }.',
           ),
         required: z.boolean().optional().describe('Whether the field is required (NOT NULL)'),
         unique: z.boolean().optional().describe('Whether the field must be unique'),
@@ -88,6 +95,7 @@ export function registerFieldTools(server: McpServer, client: NocoDBClient): voi
       uidt,
       description,
       options,
+      meta,
       required,
       unique,
       default_value,
@@ -103,7 +111,10 @@ export function registerFieldTools(server: McpServer, client: NocoDBClient): voi
               // our MCP input schema keeps `uidt` for clarity.
               type: uidt,
               description,
-              ...(options ?? {}),
+              // Pass options/meta as wrapped objects (NOT spread) — flattening
+              // them silently loses nested fields like options.choices.
+              options,
+              meta,
               rqd: required,
               un: unique,
               cdf: default_value,
@@ -118,7 +129,7 @@ export function registerFieldTools(server: McpServer, client: NocoDBClient): voi
     {
       title: 'Update field',
       description:
-        'Update a field — rename, change description, modify type-specific options, ' +
+        'Update a field — rename, change description, modify type-specific options or meta, ' +
         'change required/unique flags. Note: NocoDB may forbid type changes for fields that ' +
         'already contain data; in that case create a new field and migrate.',
       inputSchema: {
@@ -126,13 +137,30 @@ export function registerFieldTools(server: McpServer, client: NocoDBClient): voi
         field_id: fieldIdSchema,
         title: z.string().optional().describe('New display name'),
         description: z.string().optional(),
-        options: z.record(z.string(), z.unknown()).optional(),
+        options: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe('Type-specific options object (e.g. { choices: [...] } for SingleSelect)'),
+        meta: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe('Field metadata flags (e.g. { richMode: true } for LongText)'),
         required: z.boolean().optional(),
         unique: z.boolean().optional(),
         default_value: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
       },
     },
-    async ({ base_id, field_id, title, description, options, required, unique, default_value }) =>
+    async ({
+      base_id,
+      field_id,
+      title,
+      description,
+      options,
+      meta,
+      required,
+      unique,
+      default_value,
+    }) =>
       tryTool(
         () =>
           client.request(`/meta/bases/${base_id}/fields/${field_id}`, {
@@ -140,7 +168,8 @@ export function registerFieldTools(server: McpServer, client: NocoDBClient): voi
             body: {
               title,
               description,
-              ...(options ?? {}),
+              options,
+              meta,
               rqd: required,
               un: unique,
               cdf: default_value,

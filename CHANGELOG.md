@@ -7,6 +7,58 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.4] — 2026-04-26
+
+### Fixed — silent data loss in field creation with options/meta (CRITICAL)
+
+**Bug:** field-creation tools were spreading the `options` object into the
+request body instead of nesting it. NocoDB v3 META API ignores top-level
+unknown keys silently, so calls like:
+
+```ts
+create_field({ uidt: 'SingleSelect', options: { choices: [...] } })
+```
+
+would create a SingleSelect field with `choices: []` — **no error, no warning,
+just empty data**. Same for `MultiSelect`, `Formula` (formula text lost),
+`LinkToAnotherRecord` (relation config lost), Number `precision`, etc.
+
+**Fix:** pass `options` as a wrapped object verbatim, plus added a separate
+top-level `meta` parameter for field-metadata flags like `richMode`. Both
+are now sent through to NocoDB exactly as received.
+
+Affected tools (all fixed):
+- `create_field` — options + meta now correctly wrapped
+- `update_field` — same
+- `bulk_create_fields` (in schema-ops) — same
+- `create_table` (when `fields[]` is provided) — same
+- `clone_table` — now also preserves `options` from source (was losing it)
+- `clone_base` — same
+- `import_base_schema` — same
+
+### Added
+
+- New `meta` parameter on `create_field` / `update_field` / `bulk_create_fields`
+  / table fields for field metadata flags (e.g. `{ richMode: true }` for
+  rich-text LongText). Previously `meta` had to be smuggled into `options`
+  and was silently dropped.
+
+### Changed
+
+- `create_field` description rewritten with clearer per-type examples that
+  explicitly nest config under `options` (e.g. `options: { choices: [...] }`
+  not `options.choices`).
+
+### Verified live
+
+End-to-end test against NocoDB 2026.04.3:
+
+```
+POST .../fields  with options: { choices: [Draft, In Progress, Done] }
+  →  before v1.0.4: HTTP 200 + options.choices == []  (silent loss!)
+  →  after v1.0.4:  HTTP 200 + options.choices == [Draft, In Progress, Done]  (fixed)
+```
+
 ## [1.0.3] — 2026-04-26
 
 ### Fixed — accurate v3 UIDT list + create_link_field
@@ -241,7 +293,8 @@ container PaaS environments:
 - Vitest + Biome + GitHub Actions CI on Node 20 and 22
 - MIT license
 
-[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.4
 [1.0.3]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.3
 [1.0.2]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.2
 [1.0.1]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.1

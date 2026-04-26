@@ -9,7 +9,14 @@ import { fail, ok, tryTool } from './helpers.js';
 const fieldDefSchema = z.object({
   title: z.string().min(1),
   uidt: z.enum(FIELD_TYPES),
-  options: z.record(z.string(), z.unknown()).optional(),
+  options: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Type-specific options object (e.g. { choices: [...] } for SingleSelect)'),
+  meta: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Field metadata flags (e.g. { richMode: true } for LongText)'),
   description: z.string().optional(),
 });
 
@@ -46,7 +53,10 @@ export function registerSchemaOpsTools(server: McpServer, client: NocoDBClient):
                   // NocoDB v3 expects `type`; MCP input keeps the more familiar `uidt`
                   type: f.uidt,
                   description: f.description,
-                  ...(f.options ?? {}),
+                  // Pass options/meta as wrapped objects (NOT spread) — flattening
+                  // them silently loses nested fields like options.choices.
+                  options: f.options,
+                  meta: f.meta,
                 },
               },
             );
@@ -104,7 +114,13 @@ export function registerSchemaOpsTools(server: McpServer, client: NocoDBClient):
         for (const t of sourceTables.list ?? []) {
           try {
             const detail = await client.request<{
-              fields?: Array<{ title: string; type?: string; uidt?: string; meta?: unknown }>;
+              fields?: Array<{
+                title: string;
+                type?: string;
+                uidt?: string;
+                meta?: unknown;
+                options?: unknown;
+              }>;
             }>(`/meta/bases/${source_base_id}/tables/${t.id}`);
             const cleanedFields =
               detail.fields
@@ -112,7 +128,12 @@ export function registerSchemaOpsTools(server: McpServer, client: NocoDBClient):
                   const ty = f.type ?? f.uidt ?? '';
                   return !SYSTEM_TYPES.includes(ty);
                 })
-                .map((f) => ({ title: f.title, type: f.type ?? f.uidt, meta: f.meta })) ?? [];
+                .map((f) => ({
+                  title: f.title,
+                  type: f.type ?? f.uidt,
+                  options: f.options,
+                  meta: f.meta,
+                })) ?? [];
             const newTable = await client.request<{ id: string }>(
               `/meta/bases/${destBase.id}/tables`,
               { method: 'POST', body: { title: t.title, fields: cleanedFields } },
@@ -195,8 +216,19 @@ export function registerSchemaOpsTools(server: McpServer, client: NocoDBClient):
                 return ty && !SYSTEM_TYPES_IMPORT.includes(ty);
               })
               .map((f) => {
-                const ff = f as { title?: string; type?: string; uidt?: string; meta?: unknown };
-                return { title: ff.title, type: ff.type ?? ff.uidt, meta: ff.meta };
+                const ff = f as {
+                  title?: string;
+                  type?: string;
+                  uidt?: string;
+                  meta?: unknown;
+                  options?: unknown;
+                };
+                return {
+                  title: ff.title,
+                  type: ff.type ?? ff.uidt,
+                  options: ff.options,
+                  meta: ff.meta,
+                };
               });
             const created = await client.request<{ id: string }>(
               `/meta/bases/${newBase.id}/tables`,

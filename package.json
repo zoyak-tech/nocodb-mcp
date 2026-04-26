@@ -1,6 +1,6 @@
 {
   "name": "nocodb-mcp",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Full-coverage MCP server for NocoDB v3 — 92 tools across 19 groups. Manage schema, records, views, webhooks, links, attachments, dashboards, scripts, NocoDocs from any AI agent. stdio + HTTP transports.",
   "type": "module",
   "main": "dist/index-stdio.js",

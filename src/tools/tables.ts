@@ -11,7 +11,11 @@ const fieldDefSchema = z.object({
   options: z
     .record(z.string(), z.unknown())
     .optional()
-    .describe('Field-type-specific options (e.g. { choices: [...] } for SingleSelect)'),
+    .describe('Type-specific options object (e.g. { choices: [...] } for SingleSelect)'),
+  meta: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Field metadata flags (e.g. { richMode: true } for LongText)'),
 });
 
 export function registerTableTools(server: McpServer, client: NocoDBClient): void {
@@ -67,11 +71,14 @@ export function registerTableTools(server: McpServer, client: NocoDBClient): voi
             body: {
               title,
               description,
-              // Map MCP-side `uidt` -> NocoDB v3 API `type`
+              // Map MCP-side `uidt` -> NocoDB v3 API `type`. Pass options/meta
+              // as wrapped objects (NOT spread) — flattening silently loses
+              // nested data like options.choices.
               fields: fields?.map((f) => ({
                 title: f.title,
                 type: f.uidt,
-                ...(f.options ?? {}),
+                options: f.options,
+                meta: f.meta,
               })),
             },
           }),
@@ -149,7 +156,13 @@ export function registerTableTools(server: McpServer, client: NocoDBClient): voi
       tryTool(async () => {
         // NocoDB v3 returns each field's UIDT under `type`, not `uidt`
         const source = await client.request<{
-          fields?: Array<{ title: string; type?: string; uidt?: string; meta?: unknown }>;
+          fields?: Array<{
+            title: string;
+            type?: string;
+            uidt?: string;
+            meta?: unknown;
+            options?: unknown;
+          }>;
         }>(`/meta/bases/${base_id}/tables/${source_table_id}`);
 
         const SYSTEM_TYPES = [
@@ -165,7 +178,12 @@ export function registerTableTools(server: McpServer, client: NocoDBClient): voi
               const t = f.type ?? f.uidt ?? '';
               return !SYSTEM_TYPES.includes(t);
             })
-            .map((f) => ({ title: f.title, type: f.type ?? f.uidt, meta: f.meta })) ?? [];
+            .map((f) => ({
+              title: f.title,
+              type: f.type ?? f.uidt,
+              options: f.options,
+              meta: f.meta,
+            })) ?? [];
 
         const destBase = target_base_id ?? base_id;
         return client.request(`/meta/bases/${destBase}/tables`, {
