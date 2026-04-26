@@ -70,16 +70,41 @@ Then connect any MCP HTTP client to `http://your-host:3000/mcp`. Health check at
 
 ### Docker
 
+The default `CMD` runs the HTTP transport on `0.0.0.0:3000`, suitable for any container PaaS.
+
 ```bash
 docker build -t nocodb-mcp .
-docker run -p 3000:3000 \
-  -e NOCODB_BASE_URL=... -e NOCODB_API_TOKEN=... \
-  nocodb-mcp node dist/index-http.js
+docker run -d -p 3000:3000 \
+  -e NOCODB_BASE_URL=https://your-nocodb.com \
+  -e NOCODB_API_TOKEN=nc_pat_... \
+  --name nocodb-mcp nocodb-mcp
 ```
+
+Image includes a `HEALTHCHECK` that polls `/health` every 30s.
+
+### Docker Compose
+
+A ready `docker-compose.yaml` is in the repo:
+
+```bash
+NOCODB_API_TOKEN=nc_pat_... docker compose up -d
+```
+
+### Dokploy / Coolify / Railway / Render / Fly
+
+All work the same — they auto-detect the `Dockerfile`, build, and deploy. Set env vars through their UI:
+
+| Variable | Value |
+|---|---|
+| `NOCODB_BASE_URL` | your NocoDB URL |
+| `NOCODB_API_TOKEN` | your token |
+| `MCP_STATELESS` | `true` if you want horizontal scaling |
+
+The image binds to `0.0.0.0:3000` and exposes `/health` for the platform's health check. No extra config needed.
 
 ### Smithery
 
-Deployable via [Smithery](https://smithery.ai) — see `smithery.yaml` in this repo. Smithery handles env vars, container orchestration, and exposes a hosted endpoint.
+Deployable via [Smithery](https://smithery.ai) — see `smithery.yaml` in this repo. Smithery overrides the default `CMD` to run stdio (since Smithery wraps stdio servers).
 
 ---
 
@@ -93,7 +118,7 @@ Deployable via [Smithery](https://smithery.ai) — see `smithery.yaml` in this r
 | `NOCODB_TIMEOUT_MS` | — | `30000` | HTTP timeout for NocoDB calls |
 | `NOCODB_LOG_LEVEL` | — | `info` | `debug` / `info` / `warn` / `error` |
 | `PORT` (HTTP only) | — | `3000` | HTTP server port |
-| `HOST` (HTTP only) | — | `127.0.0.1` | Bind address |
+| `HOST` (HTTP only) | — | `0.0.0.0` | Bind address (set to `127.0.0.1` for loopback only) |
 | `MCP_STATELESS` (HTTP only) | — | `false` | Set to `true` to disable session IDs |
 
 See [`.env.example`](.env.example).

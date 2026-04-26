@@ -25,7 +25,11 @@ import { loadConfig } from './config.js';
 import { createServer, SERVER_VERSION } from './server.js';
 
 const PORT = Number(process.env.PORT) || 3000;
-const HOST = process.env.HOST || '127.0.0.1';
+// Default to 0.0.0.0 because the HTTP entrypoint is mainly used for container
+// deployments (Docker, Dokploy, Coolify, Smithery), where binding to 127.0.0.1
+// makes the server unreachable from outside the container. Override locally if
+// you only want to expose on loopback: HOST=127.0.0.1.
+const HOST = process.env.HOST || '0.0.0.0';
 const STATELESS = process.env.MCP_STATELESS === 'true';
 
 async function readBody(req: IncomingMessage): Promise<unknown> {

@@ -7,6 +7,37 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-04-26
+
+### Fixed — Docker / Dokploy / Coolify / Railway compatibility
+
+The Docker image shipped in v1.0.0 had two bugs that made it unusable in
+container PaaS environments:
+
+- **`HOST` defaulted to `127.0.0.1`** — server bound to loopback only inside
+  the container, so reverse proxies (Dokploy, Coolify, Traefik, etc.) could
+  not reach it. Now defaults to `0.0.0.0`. Override with `HOST=127.0.0.1` for
+  local-only.
+- **`Dockerfile CMD` ran `dist/index-stdio.js`** — stdio mode is meaningless
+  inside an HTTP-exposed container. Now runs `dist/index-http.js`.
+
+### Added
+
+- `Dockerfile` `HEALTHCHECK` directive — polls `/health` every 30s. Dokploy /
+  Coolify / Kubernetes will use this signal.
+- `Dockerfile` `EXPOSE 3000` — explicit port declaration.
+- `docker-compose.yaml` — ready-to-use example with health check, environment
+  block, restart policy.
+- README sections for **Docker**, **Docker Compose**, **Dokploy / Coolify /
+  Railway / Render / Fly** with copy-paste snippets.
+
+### Notes
+
+- Smithery deploys are unaffected — `smithery.yaml` overrides the `CMD` to run
+  stdio, which is what Smithery expects.
+- `npx -y nocodb-mcp` (stdio for Claude Code etc.) is unaffected — only the
+  HTTP entrypoint defaults changed.
+
 ## [1.0.0] — 2026-04-26
 
 ### Added — Phase 4: HTTP transport, Smithery, Docker
@@ -138,7 +169,8 @@ and this project uses [Semantic Versioning](https://semver.org/).
 - Vitest + Biome + GitHub Actions CI on Node 20 and 22
 - MIT license
 
-[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.1
 [1.0.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.0
 [0.3.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v0.3.0
 [0.2.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v0.2.0
