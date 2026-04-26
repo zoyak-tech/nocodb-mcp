@@ -7,6 +7,42 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.3] — 2026-04-26
+
+### Fixed — accurate v3 UIDT list + create_link_field
+
+Verified the live v3 META API rejects 6 of the 40 UIDT values that
+were in the MCP's `FIELD_TYPES` enum. Fixing this avoids confusing
+404/400 errors when an AI agent picks one of these from the schema:
+
+- `RichText` — not a separate type. For rich text use `LongText`
+  with `options.meta.richMode = true`.
+- `GeoData` — replaced by `Geometry`.
+- `SpecificDBType` — legacy escape hatch, removed.
+- `AutoNumber` — system-managed only, cannot create via API.
+- `ID` — system-managed.
+- `ForeignKey` — system-managed.
+
+`FIELD_TYPES` now matches the v3 API allow-list exactly (34 entries).
+
+Also fixed `create_link_field` (in tools/links.ts), which had two
+bugs that made it broken on v3:
+
+- Sent `uidt: 'LinkToAnotherRecord'` instead of `type: 'LinkToAnotherRecord'`
+- Sent the relationship type (hm/mm/bt/oo) at top level, which conflicted
+  with the UIDT key. Now correctly nested under `options: { relatedTableId,
+  type }`.
+
+### Changed
+
+- `create_field` description now lists common option patterns including
+  `meta.richMode: true` for rich text — guides AI agents to the correct
+  call shape.
+- README:
+  - field-types list updated from 40 → 34 with note about rich text and
+    system fields
+  - "All 40 v3 field types" → "All 34 v3 field types" in feature highlights
+
 ## [1.0.2] — 2026-04-26
 
 ### Fixed — `create_field` and field creation across all tools
@@ -205,7 +241,8 @@ container PaaS environments:
 - Vitest + Biome + GitHub Actions CI on Node 20 and 22
 - MIT license
 
-[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.3
 [1.0.2]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.2
 [1.0.1]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.1
 [1.0.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.0

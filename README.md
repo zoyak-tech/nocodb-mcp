@@ -16,7 +16,7 @@
 Existing NocoDB MCPs cover only records (CRUD on rows). This one covers the **whole NocoDB v3 API surface** so an AI agent can manage your databases end-to-end without dropping into the UI:
 
 - **Schema operations** — create / update / delete fields, tables, views, filters, sorts. Bulk create fields. Clone bases. Import/export schema as JSON.
-- **All 40 v3 field types** — SingleSelect, MultiSelect, Formula, LinkToAnotherRecord, Attachment, Rollup, Lookup, etc.
+- **All 34 v3 field types** — SingleSelect, MultiSelect, Formula, LinkToAnotherRecord, Attachment, Rollup, Lookup, Rich-text LongText, etc.
 - **Views** — all 6 types (grid, gallery, kanban, form, calendar, map).
 - **Webhooks** — full lifecycle, all 6 events × 7 channels.
 - **Relational links** — create relations, link/unlink records.
@@ -185,7 +185,11 @@ See [`.env.example`](.env.example).
 ### Fields ⭐ (7)
 `list_fields`, `get_field`, `create_field`, `update_field`, `delete_field` (dry_run), `reorder_field`, `bulk_rename_fields`
 
-> Supports all 40 v3 UIDT types: SingleLineText, LongText, Number, Decimal, Currency, Percent, Duration, Rating, Checkbox, SingleSelect, MultiSelect, Date, DateTime, Time, Year, PhoneNumber, Email, URL, Attachment, User, Formula, Rollup, Lookup, LinkToAnotherRecord, Links, Barcode, QrCode, JSON, Geometry, GeoData, SpecificDBType, CreatedTime, LastModifiedTime, CreatedBy, LastModifiedBy, AutoNumber, ID, ForeignKey, Button.
+> Supports all **34 NocoDB v3 UIDT types** (verified against the live v3 API): SingleLineText, LongText, PhoneNumber, URL, Email, Number, Decimal, Currency, Percent, Duration, Date, DateTime, Time, Year, SingleSelect, MultiSelect, Rating, Checkbox, Attachment, Geometry, Links, Lookup, Rollup, Button, Formula, Barcode, QrCode, CreatedTime, LastModifiedTime, CreatedBy, LastModifiedBy, LinkToAnotherRecord, User, JSON.
+>
+> **Rich text:** v3 has no separate `RichText` UIDT. Use `LongText` with `options: { meta: { richMode: true } }` to enable the WYSIWYG editor.
+>
+> **System types** (`ID`, `CreatedTime`, `LastModifiedTime`, `CreatedBy`, `LastModifiedBy`) appear in field listings but cannot be created via API — NocoDB manages them.
 
 ### Records (8)
 `list_records` (with v3 quoted `where` syntax), `get_record`, `create_records`, `update_records`, `delete_records` (dry_run), `upsert_records`, `count_records`, `global_search` (cross-table substring)

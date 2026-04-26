@@ -46,9 +46,14 @@ export function registerFieldTools(server: McpServer, client: NocoDBClient): voi
     {
       title: 'Create field',
       description:
-        'Create a new field (column) in a table. Supports all NocoDB v3 field types. ' +
-        'For SingleSelect/MultiSelect, pass `options.choices: [{ title, color? }, ...]`. ' +
-        'For Number/Decimal/Currency, pass `options.precision` etc.',
+        'Create a new field (column) in a table. Supports all 34 NocoDB v3 field types. ' +
+        'Common options patterns: ' +
+        'SingleSelect/MultiSelect → `options.choices: [{ title, color? }, ...]`; ' +
+        'Number/Decimal/Currency → `options.precision`; ' +
+        'Formula → `options.formula: "{Field1} + {Field2}"`; ' +
+        'LinkToAnotherRecord → `options.relatedTableId, options.type: "mm" | "hm" | "bt" | "oo"`; ' +
+        'Rich text in LongText → `options.meta: { richMode: true }` ' +
+        '(NocoDB v3 has no separate "RichText" type — it is LongText with this flag).',
       inputSchema: {
         base_id: baseIdSchema,
         table_id: tableIdSchema,

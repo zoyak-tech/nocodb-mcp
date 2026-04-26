@@ -32,10 +32,13 @@ export function registerLinkTools(server: McpServer, client: NocoDBClient): void
             method: 'POST',
             body: {
               title,
-              uidt: 'LinkToAnotherRecord',
-              parentId: table_id,
-              childId: related_table_id,
-              type,
+              // NocoDB v3 API uses `type` for the UIDT. The relationship type
+              // (hm/mm/bt/oo) lives under options.
+              type: 'LinkToAnotherRecord',
+              options: {
+                relatedTableId: related_table_id,
+                type,
+              },
             },
           }),
         'create_link_field',
