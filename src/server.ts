@@ -22,7 +22,7 @@ import { registerWebhookTools } from './tools/webhooks.js';
 import { registerWorkflowTools } from './tools/workflows.js';
 import { registerWorkspaceTools } from './tools/workspaces.js';
 
-export const SERVER_VERSION = '1.0.1';
+export const SERVER_VERSION = '1.0.2';
 
 export function createServer(config: NocoDBConfig): McpServer {
   const client = new NocoDBClient(config);

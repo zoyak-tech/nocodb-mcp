@@ -93,7 +93,10 @@ export function registerFieldTools(server: McpServer, client: NocoDBClient): voi
             method: 'POST',
             body: {
               title,
-              uidt,
+              // NocoDB v3 API expects `type` in the body (the legacy v2 name `uidt`
+              // was renamed). Internally NocoDB still calls these UIDT values, so
+              // our MCP input schema keeps `uidt` for clarity.
+              type: uidt,
               description,
               ...(options ?? {}),
               rqd: required,

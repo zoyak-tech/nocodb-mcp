@@ -64,7 +64,16 @@ export function registerTableTools(server: McpServer, client: NocoDBClient): voi
         () =>
           client.request(`/meta/bases/${base_id}/tables`, {
             method: 'POST',
-            body: { title, description, fields },
+            body: {
+              title,
+              description,
+              // Map MCP-side `uidt` -> NocoDB v3 API `type`
+              fields: fields?.map((f) => ({
+                title: f.title,
+                type: f.uidt,
+                ...(f.options ?? {}),
+              })),
+            },
           }),
         'create_table',
       ),
@@ -138,19 +147,25 @@ export function registerTableTools(server: McpServer, client: NocoDBClient): voi
     },
     async ({ base_id, source_table_id, new_title, target_base_id }) =>
       tryTool(async () => {
+        // NocoDB v3 returns each field's UIDT under `type`, not `uidt`
         const source = await client.request<{
-          fields?: Array<{ title: string; uidt: string; meta?: unknown }>;
+          fields?: Array<{ title: string; type?: string; uidt?: string; meta?: unknown }>;
         }>(`/meta/bases/${base_id}/tables/${source_table_id}`);
 
+        const SYSTEM_TYPES = [
+          'ID',
+          'CreatedTime',
+          'LastModifiedTime',
+          'CreatedBy',
+          'LastModifiedBy',
+        ];
         const cleanedFields =
           source.fields
-            ?.filter(
-              (f) =>
-                !['ID', 'CreatedTime', 'LastModifiedTime', 'CreatedBy', 'LastModifiedBy'].includes(
-                  f.uidt,
-                ),
-            )
-            .map((f) => ({ title: f.title, uidt: f.uidt, meta: f.meta })) ?? [];
+            ?.filter((f) => {
+              const t = f.type ?? f.uidt ?? '';
+              return !SYSTEM_TYPES.includes(t);
+            })
+            .map((f) => ({ title: f.title, type: f.type ?? f.uidt, meta: f.meta })) ?? [];
 
         const destBase = target_base_id ?? base_id;
         return client.request(`/meta/bases/${destBase}/tables`, {

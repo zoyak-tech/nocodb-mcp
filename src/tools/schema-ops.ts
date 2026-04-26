@@ -43,7 +43,8 @@ export function registerSchemaOpsTools(server: McpServer, client: NocoDBClient):
                 method: 'POST',
                 body: {
                   title: f.title,
-                  uidt: f.uidt,
+                  // NocoDB v3 expects `type`; MCP input keeps the more familiar `uidt`
+                  type: f.uidt,
                   description: f.description,
                   ...(f.options ?? {}),
                 },
@@ -93,24 +94,25 @@ export function registerSchemaOpsTools(server: McpServer, client: NocoDBClient):
           ok: boolean;
           error?: string;
         }> = [];
+        const SYSTEM_TYPES = [
+          'ID',
+          'CreatedTime',
+          'LastModifiedTime',
+          'CreatedBy',
+          'LastModifiedBy',
+        ];
         for (const t of sourceTables.list ?? []) {
           try {
             const detail = await client.request<{
-              fields?: Array<{ title: string; uidt: string; meta?: unknown }>;
+              fields?: Array<{ title: string; type?: string; uidt?: string; meta?: unknown }>;
             }>(`/meta/bases/${source_base_id}/tables/${t.id}`);
             const cleanedFields =
               detail.fields
-                ?.filter(
-                  (f) =>
-                    ![
-                      'ID',
-                      'CreatedTime',
-                      'LastModifiedTime',
-                      'CreatedBy',
-                      'LastModifiedBy',
-                    ].includes(f.uidt),
-                )
-                .map((f) => ({ title: f.title, uidt: f.uidt, meta: f.meta })) ?? [];
+                ?.filter((f) => {
+                  const ty = f.type ?? f.uidt ?? '';
+                  return !SYSTEM_TYPES.includes(ty);
+                })
+                .map((f) => ({ title: f.title, type: f.type ?? f.uidt, meta: f.meta })) ?? [];
             const newTable = await client.request<{ id: string }>(
               `/meta/bases/${destBase.id}/tables`,
               { method: 'POST', body: { title: t.title, fields: cleanedFields } },
@@ -177,25 +179,24 @@ export function registerSchemaOpsTools(server: McpServer, client: NocoDBClient):
           new_table_id?: string;
           error?: string;
         }> = [];
+        const SYSTEM_TYPES_IMPORT = [
+          'ID',
+          'CreatedTime',
+          'LastModifiedTime',
+          'CreatedBy',
+          'LastModifiedBy',
+        ];
         for (const table of schema.tables ?? []) {
           try {
             const fields = (table.fields ?? [])
               .filter((f) => {
-                const uidt = (f as { uidt?: string }).uidt;
-                return (
-                  uidt &&
-                  ![
-                    'ID',
-                    'CreatedTime',
-                    'LastModifiedTime',
-                    'CreatedBy',
-                    'LastModifiedBy',
-                  ].includes(uidt)
-                );
+                const ff = f as { type?: string; uidt?: string };
+                const ty = ff.type ?? ff.uidt;
+                return ty && !SYSTEM_TYPES_IMPORT.includes(ty);
               })
               .map((f) => {
-                const ff = f as { title?: string; uidt?: string; meta?: unknown };
-                return { title: ff.title, uidt: ff.uidt, meta: ff.meta };
+                const ff = f as { title?: string; type?: string; uidt?: string; meta?: unknown };
+                return { title: ff.title, type: ff.type ?? ff.uidt, meta: ff.meta };
               });
             const created = await client.request<{ id: string }>(
               `/meta/bases/${newBase.id}/tables`,

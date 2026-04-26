@@ -7,6 +7,42 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-04-26
+
+### Fixed — `create_field` and field creation across all tools
+
+Discovered through live testing against NocoDB 2026.04.3 Community
+Self-hosted: the v3 META API renamed the field-type body parameter
+from `uidt` (legacy v2 name) to `type`. The MCP server was still
+sending `uidt`, causing every field-creation request to fail with
+HTTP 400 `ERR_INVALID_REQUEST_BODY: 'type' is required`.
+
+Affected tools (all fixed):
+- `create_field` — body now sends `type` instead of `uidt`
+- `create_table` (when fields[] is provided) — same
+- `clone_table` — also reads `type ?? uidt` from the source for
+  forward+backward compatibility
+- `bulk_create_fields` (in schema-ops) — same
+- `clone_base` (in schema-ops) — same
+- `import_base_schema` (in schema-ops) — same
+
+The MCP-side input parameter remains `uidt` for clarity and stability
+of the public tool interface. The translation `uidt` → `type` happens
+inside the request body construction.
+
+Verified live: POST .../fields with `{ "type": "SingleLineText" }`
+returns 200 + new field ID.
+
+### Notes
+
+This fix only matters for **field/table creation** flows. Read,
+update, and delete operations were already using the correct names
+and were not affected.
+
+Listing tools (`list_fields`, `get_field`, `get_table`) returned the
+field type under both `type` and `uidt` keys depending on endpoint —
+the cleanup loops in clone_*/import_* now handle either.
+
 ## [1.0.1] — 2026-04-26
 
 ### Fixed — Docker / Dokploy / Coolify / Railway compatibility
@@ -169,7 +205,8 @@ container PaaS environments:
 - Vitest + Biome + GitHub Actions CI on Node 20 and 22
 - MIT license
 
-[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/zoyak-tech/nocodb-mcp/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.2
 [1.0.1]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.1
 [1.0.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v1.0.0
 [0.3.0]: https://github.com/zoyak-tech/nocodb-mcp/releases/tag/v0.3.0
