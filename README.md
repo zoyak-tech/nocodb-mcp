@@ -259,7 +259,10 @@ All `delete_*` tools accept a `dry_run: true` parameter that returns a JSON prev
 ## Requirements
 
 - **Node.js 20** or newer
-- **NocoDB 0.265+** (v3 API). Recommended: latest `2026.04.x`.
+- **NocoDB** — full functionality on calendar builds (`2026.04.x`+) and NocoDB Cloud,
+  which expose the `/api/v3` API. Older self-hosted builds (semver `v0.30x`) also work:
+  the two workspace-only tools (`list_workspaces`, `ping_nocodb`) degrade gracefully to
+  the legacy `/api/v1` API. Recommended: latest `2026.04.x`.
 - A NocoDB API token (NocoDB → Account Settings → Tokens → Create)
 
 Verify your NocoDB version:

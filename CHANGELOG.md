@@ -7,6 +7,31 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.5] — 2026-07-05
+
+### Fixed — `list_workspaces` and `ping_nocodb` failing on NocoDB without the v3 workspace API (#1)
+
+**Bug:** the client defaults every request to the `/api/v3` API. `list_workspaces`
+and the workspace-count step of `ping_nocodb` call `/api/v3/meta/workspaces`, which
+does not exist on older self-hosted NocoDB (semver `v0.30x` — the current npm
+`latest`). Both tools returned a hard `404 Not Found: Cannot GET /api/v3/meta/workspaces`.
+Reported in #1 (thanks @AngieOdin).
+
+**Fix:**
+
+- `ping_nocodb` now treats the workspace count as best-effort. Version and auth are
+  checked via `/api/v1/version` (present on every build); when the v3 workspace probe
+  is unavailable, ping still returns `ok: true` with `accessibleWorkspaces: null`.
+- `list_workspaces` now falls back to the legacy `/api/v1/db/meta/projects` endpoint
+  when the v3 workspace API 404s, returning the bases (projects) with an `_apiFallback`
+  / `_note` annotation. If neither API is available it throws a clear error pointing to
+  `list_bases`.
+
+Modern NocoDB (`2026.04.x` / cloud) is unaffected — the v3 path is used exactly as
+before. Logic extracted to `src/tools/workspace-helpers.ts`, covered by
+`tests/workspace-fallback.test.ts` (both v3-present and v3-absent paths).
+
+
 ## [1.0.4] — 2026-04-26
 
 ### Fixed — silent data loss in field creation with options/meta (CRITICAL)
