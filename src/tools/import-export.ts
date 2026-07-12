@@ -145,16 +145,11 @@ export function registerImportExportTools(server: McpServer, client: NocoDBClien
           return fail(new Error('Table created but no ID returned'), 'import_csv_to_new_table');
         }
 
-        const batch = batch_size ?? 100;
-        let inserted = 0;
-        for (let i = 0; i < records.length; i += batch) {
-          const chunk = records.slice(i, i + batch);
-          await client.request(`/data/${base_id}/${created.id}/records`, {
-            method: 'POST',
-            body: chunk,
-          });
-          inserted += chunk.length;
-        }
+        const { count: inserted } = await client.writeRecords(
+          `/data/${base_id}/${created.id}/records`,
+          records,
+          { method: 'POST', batchSize: batch_size },
+        );
 
         return ok({
           table_id: created.id,
@@ -187,15 +182,11 @@ export function registerImportExportTools(server: McpServer, client: NocoDBClien
       try {
         const csv = await readFile(file_path, 'utf-8');
         const records = csvToRecords(csv);
-        const batch = batch_size ?? 100;
-        let inserted = 0;
-        for (let i = 0; i < records.length; i += batch) {
-          await client.request(`/data/${base_id}/${table_id}/records`, {
-            method: 'POST',
-            body: records.slice(i, i + batch),
-          });
-          inserted += Math.min(batch, records.length - i);
-        }
+        const { count: inserted } = await client.writeRecords(
+          `/data/${base_id}/${table_id}/records`,
+          records,
+          { method: 'POST', batchSize: batch_size },
+        );
         return ok({ table_id, records_inserted: inserted });
       } catch (err) {
         return fail(err, 'import_csv_append');
@@ -222,15 +213,11 @@ export function registerImportExportTools(server: McpServer, client: NocoDBClien
     },
     async ({ base_id, table_id, records, batch_size }) =>
       tryTool(async () => {
-        const batch = batch_size ?? 100;
-        let inserted = 0;
-        for (let i = 0; i < records.length; i += batch) {
-          await client.request(`/data/${base_id}/${table_id}/records`, {
-            method: 'POST',
-            body: records.slice(i, i + batch),
-          });
-          inserted += Math.min(batch, records.length - i);
-        }
+        const { count: inserted } = await client.writeRecords(
+          `/data/${base_id}/${table_id}/records`,
+          records,
+          { method: 'POST', batchSize: batch_size },
+        );
         return { table_id, records_inserted: inserted };
       }, 'import_json_records'),
   );

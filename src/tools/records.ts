@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import type { NocoDBClient } from '../client.js';
+import { chunk, effectiveBatchSize, toDeletePayload } from '../record-payload.js';
 import { baseIdSchema, dryRunSchema, tableIdSchema } from '../schemas/common.js';
 import { dryRunPreview, tryTool } from './helpers.js';
 
@@ -76,19 +77,19 @@ export function registerRecordTools(server: McpServer, client: NocoDBClient): vo
       title: 'Create records (bulk)',
       description:
         'Insert one or more records. Each record is an object { field_title: value, ... }. ' +
-        'Returns the created records with their assigned IDs.',
+        'Records are auto-batched to the API limit (10 per request on v3) and the results ' +
+        'are aggregated. Returns the created records with their assigned IDs.',
       inputSchema: {
         base_id: baseIdSchema,
         table_id: tableIdSchema,
-        records: z.array(recordSchema).min(1).describe('Array of records to insert (max ~1000)'),
+        records: z.array(recordSchema).min(1).describe('Array of records to insert'),
       },
     },
     async ({ base_id, table_id, records }) =>
       tryTool(
         () =>
-          client.request(`/data/${base_id}/${table_id}/records`, {
+          client.writeRecords(`/data/${base_id}/${table_id}/records`, records, {
             method: 'POST',
-            body: records,
           }),
         'create_records',
       ),
@@ -100,7 +101,7 @@ export function registerRecordTools(server: McpServer, client: NocoDBClient): vo
       title: 'Update records (bulk)',
       description:
         'Update one or more records. Each record MUST include its primary key (Id). ' +
-        'Only the included fields are updated.',
+        'Only the included fields are updated. Auto-batched to the API limit (10 per request on v3).',
       inputSchema: {
         base_id: baseIdSchema,
         table_id: tableIdSchema,
@@ -113,9 +114,8 @@ export function registerRecordTools(server: McpServer, client: NocoDBClient): vo
     async ({ base_id, table_id, records }) =>
       tryTool(
         () =>
-          client.request(`/data/${base_id}/${table_id}/records`, {
+          client.writeRecords(`/data/${base_id}/${table_id}/records`, records, {
             method: 'PATCH',
-            body: records,
           }),
         'update_records',
       ),
@@ -147,14 +147,20 @@ export function registerRecordTools(server: McpServer, client: NocoDBClient): vo
           record_ids,
         });
       }
-      return tryTool(
-        () =>
-          client.request(`/data/${base_id}/${table_id}/records`, {
+      return tryTool(async () => {
+        // v3 caps a single request at 10 records, so batch large deletions.
+        const size = effectiveBatchSize(client.apiVersion, record_ids.length);
+        const deleted: unknown[] = [];
+        for (const group of chunk(record_ids, size)) {
+          const res = await client.request(`/data/${base_id}/${table_id}/records`, {
             method: 'DELETE',
-            body: record_ids.map((id) => ({ Id: id })),
-          }),
-        'delete_records',
-      );
+            body: toDeletePayload(group, client.apiVersion),
+          });
+          if (Array.isArray(res)) deleted.push(...res);
+          else if (res != null) deleted.push(res);
+        }
+        return { table_id, records_deleted: record_ids.length, results: deleted };
+      }, 'delete_records');
     },
   );
 
@@ -174,9 +180,9 @@ export function registerRecordTools(server: McpServer, client: NocoDBClient): vo
     async ({ base_id, table_id, records }) =>
       tryTool(
         () =>
-          client.request(`/data/${base_id}/${table_id}/records/upsert`, {
+          client.writeRecords(`/data/${base_id}/${table_id}/records/upsert`, records, {
             method: 'POST',
-            body: records,
+            mode: 'upsert',
           }),
         'upsert_records',
       ),

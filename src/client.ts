@@ -1,4 +1,12 @@
 import type { NocoDBConfig } from './config.js';
+import {
+  type ApiVersion,
+  chunk,
+  collectWriteResult,
+  effectiveBatchSize,
+  toRecordPayload,
+  type WriteMode,
+} from './record-payload.js';
 
 export class NocoDBError extends Error {
   constructor(
@@ -23,8 +31,13 @@ interface RequestOptions {
 export class NocoDBClient {
   constructor(private readonly config: NocoDBConfig) {}
 
+  /** Configured data API version (defaults to v3 when unset). */
+  get apiVersion(): ApiVersion {
+    return this.config.apiVersion ?? 'v3';
+  }
+
   async request<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
-    const { method = 'GET', query, body, apiVersion = 'v3' } = options;
+    const { method = 'GET', query, body, apiVersion = this.apiVersion } = options;
 
     const url = this.buildUrl(path, apiVersion, query);
     const headers: Record<string, string> = {
@@ -75,6 +88,37 @@ export class NocoDBClient {
     } finally {
       clearTimeout(timeout);
     }
+  }
+
+  /**
+   * Insert or update records against a data-API records endpoint, shaping the
+   * body for the configured API version and honoring its per-request record cap.
+   *
+   * For v3, records are shaped for the write intent (insert → `{ fields }`,
+   * update/upsert → `{ id, fields }`) and requests are chunked to at most 10
+   * records (the v3 hard limit); results are aggregated across batches. For
+   * v1/v2 the flat legacy shape is used. `mode` defaults from `method`
+   * (POST → insert, PATCH → update).
+   */
+  async writeRecords(
+    path: string,
+    records: Array<Record<string, unknown>>,
+    options: { method?: 'POST' | 'PATCH'; mode?: WriteMode; batchSize?: number } = {},
+  ): Promise<{ records: unknown[]; count: number; batches: number }> {
+    const method = options.method ?? 'POST';
+    const mode = options.mode ?? (method === 'PATCH' ? 'update' : 'insert');
+    const version = this.apiVersion;
+    const size = effectiveBatchSize(version, options.batchSize);
+    const groups = chunk(records, size);
+
+    const collected: unknown[] = [];
+    for (const group of groups) {
+      const body = group.map((r) => toRecordPayload(r, version, mode));
+      const res = await this.request(path, { method, body, apiVersion: version });
+      collected.push(...collectWriteResult(res));
+    }
+
+    return { records: collected, count: records.length, batches: groups.length };
   }
 
   private buildUrl(
