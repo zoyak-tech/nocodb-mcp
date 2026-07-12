@@ -7,6 +7,40 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.6] — 2026-07-12
+
+### Fixed — record writes rejected by the NocoDB v3 data API (400 / 422)
+
+**Bug:** every record-write tool (`create_records`, `update_records`,
+`upsert_records`, `import_csv_append`, `import_json_records`,
+`import_csv_to_new_table`) POSTed records as flat objects, e.g.
+`[{ Title: …, Site: … }]`. Against the v3 data API (`POST /api/v3/data/{baseId}/{tableId}/records`,
+NocoDB `2026.04.x`) this fails with `400 ERR_INVALID_REQUEST_BODY`:
+_"All record parameters need to be put inside 'fields' property"_. The v3 API also
+caps a single request at **10 records** (`422 ERR_MAX_PAYLOAD_LIMIT_EXCEEDED` above 10),
+and empty strings sent to typed columns (Number/Decimal/Date) trigger validation errors.
+`delete_records` was affected too — v3 requires a lowercase `id` per record
+(`400 Property 'id' is required`), not `Id`.
+
+**Fix:**
+
+- Record writes now shape the body for the target API version. On v3, inserts are
+  wrapped as `{ fields: { … } }` and updates/upserts as `{ id, fields: { … } }`
+  (the record id is a sibling of `fields`, not a field).
+- Writes are auto-chunked to **≤10 records per request** on v3 and results are
+  aggregated across batches. Legacy versions keep larger batches.
+- `null` / `undefined` / `""` values are omitted from each record so empty typed
+  columns no longer reject the request (meaningful `0` / `false` are preserved).
+- `delete_records` sends the version-correct id key (`id` on v3, `Id` on v1/v2) and
+  is likewise batched to ≤10.
+- New `NOCODB_API_VERSION` env var (`v1` | `v2` | `v3`, default `v3`) selects the
+  write shape and batch cap, preserving backward compatibility with pre-v3 instances.
+
+Validated end-to-end against a live NocoDB `2026.04.3` instance (create → read →
+update → delete round-trip returns `200`). New unit tests cover the payload shaping,
+batching, empty-stripping, and delete-key selection in `tests/record-payload.test.ts`
+and `tests/write-records.test.ts`.
+
 ## [1.0.5] — 2026-07-05
 
 ### Fixed — `list_workspaces` and `ping_nocodb` failing on NocoDB without the v3 workspace API (#1)
