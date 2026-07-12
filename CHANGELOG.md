@@ -7,6 +7,21 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.7] — 2026-07-12
+
+### Fixed — server reported a stale, hardcoded version
+
+The version string was hardcoded in two places and never kept in sync with
+`package.json`: `src/server.ts` pinned `SERVER_VERSION = '1.0.5'` (so `serverInfo`
+and the tools-registered log announced `1.0.5` even from the 1.0.6 build), and
+`src/index-stdio.ts` printed a stale `nocodb-mcp v0.1.0 ready`. This made a
+correctly-installed build look like the wrong version.
+
+**Fix:** `SERVER_VERSION` is now read from `package.json` at runtime
+(`src/version.ts`), so both transports (`stdio` + `http`) always report the real
+package version. Added a test asserting `SERVER_VERSION` matches `package.json`.
+No behavior change to any tool.
+
 ## [1.0.6] — 2026-07-12
 
 ### Fixed — record writes rejected by the NocoDB v3 data API (400 / 422)
