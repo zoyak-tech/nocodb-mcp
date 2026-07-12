@@ -21,8 +21,9 @@ import { registerViewTools } from './tools/views.js';
 import { registerWebhookTools } from './tools/webhooks.js';
 import { registerWorkflowTools } from './tools/workflows.js';
 import { registerWorkspaceTools } from './tools/workspaces.js';
+import { SERVER_VERSION } from './version.js';
 
-export const SERVER_VERSION = '1.0.5';
+export { SERVER_VERSION };
 
 export function createServer(config: NocoDBConfig): McpServer {
   const client = new NocoDBClient(config);
